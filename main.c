@@ -113,7 +113,7 @@ void *consumer(void) {
     for (int i = 0; i<LOOP_TIMES; i++) {
         millisleep(10);
 
-        // whichBuffer?
+        //TODO: whichBuffer?
         Buffer *b;
 
         // get data from buffer
