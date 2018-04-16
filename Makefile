@@ -6,4 +6,4 @@ clean:
 	rm main
 
 run:
-	./main 0.3
+	./main 0.5

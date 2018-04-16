@@ -40,7 +40,6 @@
     #define URGENT 1
     #define BUFFER_SIZE 16
     #define LOOP_TIMES 100
-    #define OVER (-1)
 
     // struct
     typedef struct Data {
@@ -73,7 +72,7 @@
     int millisleep(long milliseconds);
     void nano_sleep(long  ns);
     void putOnBuffer(Data data, Buffer *b);
-    Data getFromBuffer(Buffer *b);
+    Data getFromBuffer();
 
     // main
     int main(int argc, char **argv) {
@@ -84,7 +83,7 @@
             exit(-1);
         }
 
-        probability = atof(argv[1]);
+        probability = (float) atof(argv[1]);
         printf(" > Probability: %f!\n", probability);
 
         // variables
@@ -95,8 +94,8 @@
         printf(" > Buffers created!\n");
 
         // create threads
-        pthread_create(&th_consumer, NULL, consumer, 0);
-        pthread_create(&th_producer, NULL, producer, 0);
+        pthread_create(&th_consumer, NULL, (void *(*)(void *)) consumer, 0);
+        pthread_create(&th_producer, NULL, (void *(*)(void *)) producer, 0);
         printf(" > Thread created!\n");
 
         // wait until producer and consumer end
@@ -114,11 +113,8 @@
         for (int i = 0; i<LOOP_TIMES; i++) {
             millisleep(10);
 
-            //TODO: which Buffer?
-            Buffer *b = normal_buf;
-
             // get data from buffer
-            Data data = getFromBuffer(b);
+            Data data = getFromBuffer();
 
             // print information
             if (data.buf == URGENT) {
@@ -126,6 +122,7 @@
             } else {
                 printf(" >>> Consumer: ms is %lli and buffer is NORMAL!\n", data.ms);
             }
+
         }
         return NULL;
     }
@@ -142,7 +139,10 @@
 
             // randomly selects normal or urgent buffer
             int int_probability = (int) (probability * 10);
+            //printf(" >> Producer: int_probability is %i!\n", int_probability);
+
             int rand_n = getRandomNumber((unsigned int) time(NULL), 1, 10);
+            //printf(" >> Producer: rand_n is %i!\n", rand_n);
 
             Buffer *b;
             int buf;
@@ -236,8 +236,22 @@
         sem_post(b->full);
     }
 
-    Data getFromBuffer(Buffer *b) {
+    Data getFromBuffer() {
         Data data;
+        int result, value;
+        Buffer *b;
+
+        // select buffer with priority
+        if ((result = sem_getvalue(urgent_buf->full, &value) == -1)) {
+            fprintf(stdout, "Error retrieving sem value\n");
+            exit(-1);
+        }
+
+        if (value > 0) {
+            b = urgent_buf;
+        } else {
+            b = normal_buf;
+        }
 
         sem_wait(b->full);
         data.buf = b->data[b->out].buf;
@@ -250,7 +264,7 @@
     }
 
     int getRandomNumber(unsigned int seed, int min, int max) {
-        srand(seed);
+        //srand(seed);
         int num = rand() % (max - min + 1) + min;
         return num;
     }
